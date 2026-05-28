@@ -144,6 +144,10 @@ CREATE POLICY "Everyone can read orders" ON orders FOR SELECT USING (true);
 CREATE POLICY "Customers can place orders" ON orders FOR INSERT
   WITH CHECK (status = 'pending');
 
+CREATE POLICY "Users can cancel their own pending orders" ON orders FOR UPDATE
+  USING (auth.uid() = user_id AND status = 'pending')
+  WITH CHECK (auth.uid() = user_id AND status = 'cancelled');
+
 CREATE POLICY "Staff can update orders" ON orders FOR UPDATE
   USING (public.is_staff()) WITH CHECK (public.is_staff());
 

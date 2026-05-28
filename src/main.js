@@ -132,20 +132,41 @@ function setupEventListeners() {
     });
   }
 
-  const orderTypeToggle = document.getElementById('orderTypeToggle');
+  const orderTypeBadge = document.getElementById('orderTypeBadge');
   const orderTypeLabel = document.getElementById('orderTypeLabel');
+  const orderTypeMenu = document.getElementById('orderTypeMenu');
   const tableNum = document.getElementById('tableNum');
   
-  if (orderTypeToggle) {
-    orderTypeToggle.addEventListener('click', () => {
-      if (orderType === 'dine_in') {
-        orderType = 'takeaway';
-        orderTypeLabel.textContent = 'Takeaway';
-        tableNum.textContent = `Table ${TABLE_NUMBER} · Takeaway`;
-      } else {
-        orderType = 'dine_in';
-        orderTypeLabel.textContent = 'Dine In';
-        tableNum.textContent = `Table ${TABLE_NUMBER} · Dine In`;
+  if (orderTypeBadge && orderTypeMenu) {
+    orderTypeBadge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      orderTypeMenu.classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        const val = e.target.getAttribute('data-val');
+        
+        // Update active class
+        document.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        orderType = val;
+        if (orderType === 'takeaway') {
+          orderTypeLabel.textContent = 'Takeaway';
+          tableNum.textContent = `Table ${TABLE_NUMBER} · Takeaway`;
+        } else {
+          orderTypeLabel.textContent = 'Dine In';
+          tableNum.textContent = `Table ${TABLE_NUMBER} · Dine In`;
+        }
+        orderTypeMenu.classList.add('hidden');
+      });
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!orderTypeMenu.contains(e.target) && !orderTypeBadge.contains(e.target)) {
+        orderTypeMenu.classList.add('hidden');
       }
     });
   }

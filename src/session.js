@@ -1,8 +1,8 @@
 import { supabase, isConfigured } from './supabase.js';
-import { appConfig } from './config.js';
+import { appConfig, DEFAULT_TABLE_NUMBER } from './config.js';
 
 export let currentUser = null;
-export let currentTable = appConfig.tableNumber;
+export let currentTable = appConfig.tableNumber || DEFAULT_TABLE_NUMBER;
 
 export async function initSession() {
   if (!isConfigured()) return null;
@@ -49,7 +49,13 @@ export async function initSession() {
       .single();
       
     if (cartData) {
-      currentTable = cartData.table_number || currentTable;
+      if (appConfig.tableNumber && appConfig.tableNumber !== cartData.table_number) {
+        // User scanned a specific table QR code that differs from their DB session! Update DB.
+        currentTable = appConfig.tableNumber;
+        await supabase.from('cart_sessions').update({ table_number: currentTable }).eq('user_id', currentUser.id);
+      } else {
+        currentTable = cartData.table_number || currentTable;
+      }
       return cartData.cart_data;
     } else if (!fetchError || fetchError.code === 'PGRST116') { // not found
       // Session exists in browser, but row in DB was deleted somehow. Re-create it.

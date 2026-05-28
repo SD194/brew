@@ -1,4 +1,4 @@
-const DEFAULT_TABLE_NUMBER = 1;
+export const DEFAULT_TABLE_NUMBER = 1;
 const MAX_TABLE_NUMBER = 20;
 
 function readEnv(name) {
@@ -16,7 +16,7 @@ function getTableNumber() {
     }
   }
   
-  return DEFAULT_TABLE_NUMBER;
+  return null;
 }
 
 export const appConfig = {
