@@ -21,7 +21,7 @@ let subscriptions = {};
 let pollIntervals = {};
 let currentTrackerOrderId = null;
 
-export function showTracker(order) {
+export function showTracker(order, silent = false) {
   // If order is passed, add it to tracking
   if (order && !activeOrders.find(o => o.id === order.id)) {
     const newOrder = { ...order, status: order.status || 'pending' };
@@ -43,7 +43,10 @@ export function showTracker(order) {
   currentTrackerOrderId = orderIdToShow;
   renderTracker();
   renderFloatingTracker();
-  document.getElementById('orderTracker').classList.add('show');
+  
+  if (!silent) {
+    document.getElementById('orderTracker').classList.add('show');
+  }
 }
 
 export function hideTracker() {

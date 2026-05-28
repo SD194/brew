@@ -316,6 +316,6 @@ export function openSheet(id) {
   document.getElementById('overlayBg').classList.add('show');
 }
 export function closeAllSheets() {
-  document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('show'));
+  document.querySelectorAll('.bottom-sheet, .slide-page').forEach(s => s.classList.remove('show'));
   document.getElementById('overlayBg').classList.remove('show');
 }

@@ -1,18 +1,28 @@
-const DEFAULT_TABLE_NUMBER = 4;
+const DEFAULT_TABLE_NUMBER = 1;
+const MAX_TABLE_NUMBER = 20;
 
 function readEnv(name) {
   return import.meta.env[name]?.trim() || '';
 }
 
-function parseTableNumber(value) {
-  const tableNumber = Number.parseInt(value, 10);
-  return Number.isInteger(tableNumber) && tableNumber > 0 ? tableNumber : DEFAULT_TABLE_NUMBER;
+function getTableNumber() {
+  const path = window.location.pathname;
+  const match = path.match(/^\/(\d+)\/?$/);
+  
+  if (match) {
+    const tableNumber = Number.parseInt(match[1], 10);
+    if (Number.isInteger(tableNumber) && tableNumber > 0 && tableNumber <= MAX_TABLE_NUMBER) {
+      return tableNumber;
+    }
+  }
+  
+  return DEFAULT_TABLE_NUMBER;
 }
 
 export const appConfig = {
   supabaseUrl: readEnv('VITE_SUPABASE_URL'),
   supabaseAnonKey: readEnv('VITE_SUPABASE_ANON_KEY'),
-  tableNumber: parseTableNumber(readEnv('VITE_TABLE_NUMBER')),
+  tableNumber: getTableNumber(),
   razorpayKeyId: readEnv('VITE_RAZORPAY_KEY_ID')
 };
 

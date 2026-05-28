@@ -21,8 +21,7 @@
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
-    "@supabase/supabase-js": "^2.104.1",
-    "firebase": "^12.13.0"
+    "@supabase/supabase-js": "^2.104.1"
   },
   "devDependencies": {
     "vite": "^8.0.10"

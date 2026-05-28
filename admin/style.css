@@ -146,7 +146,8 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .pos-item-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:all .15s;text-align:center}
 .pos-item-card:hover{border-color:var(--brand);transform:translateY(-2px)}
 .pos-item-card.in-cart{border-color:var(--green)}
-.pos-item-emoji{font-size:28px;margin-bottom:6px}
+.pos-item-emoji{font-size:28px;margin-bottom:6px;height:46px;display:flex;align-items:center;justify-content:center}
+.pos-item-emoji img{width:100%;height:100%;object-fit:cover;border-radius:6px}
 .pos-item-name{font-size:12px;font-weight:600;line-height:1.3;margin-bottom:4px}
 .pos-item-price{font-size:13px;font-weight:700;color:var(--brand-l)}
 .pos-cart-header{padding:16px;border-bottom:1px solid var(--border);font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center}

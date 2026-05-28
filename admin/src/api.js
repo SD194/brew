@@ -181,3 +181,20 @@ export async function validateCoupon(code, subtotal) {
 
   return coupon;
 }
+
+export async function fetchStoreSettings() {
+  if (!isConfigured()) return { is_online: true };
+  const { data, error } = await supabase.from('store_settings').select('*').eq('id', 1).single();
+  if (error) {
+    console.error('Error fetching store settings:', error);
+    return { is_online: true };
+  }
+  return data;
+}
+
+export async function updateStoreSettings(isOnline) {
+  if (!isConfigured()) return { is_online: isOnline };
+  const { data, error } = await supabase.from('store_settings').update({ is_online: isOnline }).eq('id', 1).select().single();
+  if (error) throw error;
+  return data;
+}

@@ -10,6 +10,7 @@ import { renderPOS, initPOS } from './pos.js';
 import { renderMenuManager } from './menu-manager.js';
 import { renderAnalytics } from './analytics.js';
 import { renderStaff } from './staff.js';
+import { renderSettings } from './settings.js';
 
 // ── Global App State ──
 window.APP = {
@@ -72,9 +73,17 @@ async function handleLogin() {
     await loadProductionData();
     showApp();
   } catch (err) {
+    console.error('Login Error:', err);
     errEl.textContent = err.message || 'Login failed';
+    // If we failed after auth but during loadProductionData, we should probably sign out so they aren't stuck half-logged-in
+    if (APP.user && !err.message.includes('credentials')) {
+      supabase.auth.signOut();
+      APP.user = null;
+    }
   }
 }
+
+
 
 async function loadProductionData() {
   const data = await fetchAdminData();
@@ -156,12 +165,12 @@ function showApp() {
 }
 
 // ── Routing ──
-const pages = { dashboard: renderDashboard, orders: renderOrders, pos: renderPOS, menu: renderMenuManager, analytics: renderAnalytics, staff: renderStaff };
-const titles = { dashboard:'Dashboard', orders:'Order Management', pos:'New Order (POS)', menu:'Menu Manager', analytics:'Analytics', staff:'Staff Management' };
+const pages = { dashboard: renderDashboard, orders: renderOrders, pos: renderPOS, menu: renderMenuManager, analytics: renderAnalytics, staff: renderStaff, settings: renderSettings };
+const titles = { dashboard:'Dashboard', orders:'Order Management', pos:'New Order (POS)', menu:'Menu Manager', analytics:'Analytics', staff:'Staff Management', settings:'Store Settings' };
 
 export function navigateTo(page) {
   if (!pages[page]) page = 'dashboard';
-  if (APP.role !== 'admin' && ['menu','analytics','staff'].includes(page)) page = 'dashboard';
+  if (APP.role !== 'admin' && ['menu','analytics','staff','settings'].includes(page)) page = 'dashboard';
 
   APP.currentPage = page;
   window.location.hash = page;
@@ -245,8 +254,26 @@ function initRealtime() {
 }
 
 // ── Boot ──
-document.addEventListener('DOMContentLoaded', () => {
+async function checkSession() {
+  if (!isConfigured()) return;
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    if (session) {
+      APP.user = session.user;
+      APP.role = (session.user?.email === 'sharathnaikhelpline@gmail.com' || session.user?.app_metadata?.role !== 'staff') ? 'admin' : 'staff';
+      await loadProductionData();
+      showApp();
+    }
+  } catch (err) {
+    console.error('Session check failed:', err);
+    // Do nothing else, just stay on login screen
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
   initAuth();
+  await checkSession();
   initSidebar();
   initRealtime();
 });

@@ -1,219 +1,273 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>BrewSync — Smart Café Ordering</title>
-<meta name="description" content="BrewSync Café — Scan, order & pay from your table. Fresh coffee, pastries, meals and more."/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="/style.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>BrewSync — Smart Café Ordering</title>
+  <meta name="description"
+    content="BrewSync Café — Scan, order & pay from your table. Fresh coffee, pastries, meals and more." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
+
 <body>
-
-<!-- HEADER -->
-<header class="header">
-  <div class="header-left">
-    <div class="logo-mark">B</div>
-    <div>
-      <div class="cafe-name">BrewSync Café <span id="connStatus" style="font-size:10px;font-weight:400">● Loading…</span></div>
-      <div class="cafe-sub" id="tableNum">Table 4 · Dine In</div>
+  <div id="offlineOverlay" class="offline-overlay">
+    <div class="offline-content">
+      <h2>We are currently closed.</h2>
+      <p>We are not accepting online orders at this time.<br>Please check back later!</p>
     </div>
   </div>
-  <div class="header-actions">
-    <div class="dine-badge" id="orderTypeToggle">
-      <span id="orderTypeLabel">Dine In</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-    </div>
-    <button class="header-cart-btn" id="headerCartBtn" aria-label="View Cart">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="9" cy="21" r="1"/>
-        <circle cx="20" cy="21" r="1"/>
-        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-      </svg>
-      <span class="header-cart-count" id="headerCartCount">0</span>
-    </button>
-  </div>
-</header>
+  <div class="app-container"
+    style="margin:0 auto; background:var(--bg); min-height:100vh; position:relative; box-shadow:0 0 20px rgba(0,0,0,0.05); overflow-x:hidden;">
 
-<!-- FLOATING ORDER TRACKER -->
-<div class="active-orders-float hidden" id="activeOrdersFloat"></div>
-
-
-<!-- BANNER CAROUSEL -->
-<div class="banner-wrap">
-  <div class="banner-track" id="bannerTrack"></div>
-  <div class="banner-dots" id="bannerDots"></div>
-</div>
-
-
-
-<!-- EXPLORE MENU -->
-<div class="section-head">
-  Explore Menu
-</div>
-
-<!-- CATEGORY GRID -->
-<div class="cat-grid" id="catGrid"></div>
-
-<!-- SEARCH -->
-<div class="search-sticky" id="searchSticky">
-  <div class="search-wrap">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input class="search-input" id="searchInput" placeholder="Search for items..."/>
-  </div>
-</div>
-
-<!-- MENU SECTIONS (rendered dynamically) -->
-<div id="menuSections"></div>
-
-<div class="bottom-pad"></div>
-
-<!-- FLOAT MENU BTN -->
-<button class="float-menu" id="floatMenu">
-  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  Menu
-</button>
-
-<!-- CART BAR -->
-<div class="cart-bar hidden" id="cartBar">
-  <div><span id="cartCount" class="cart-count-badge">0 items</span></div>
-  <div class="cart-bar-right">
-    <span id="cartTotal">₹0</span>
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  </div>
-</div>
-
-<!-- OVERLAY -->
-<div class="overlay-bg" id="overlayBg"></div>
-
-<!-- CART SHEET -->
-<div class="bottom-sheet" id="cartSheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <span class="sheet-title">My Order</span>
-    <button class="close-btn">✕</button>
-  </div>
-  <div id="cartItemsList"></div>
-  <div class="coupon-row" id="couponRowBtn">
-    <div class="coupon-icon">%</div>
-    <span>Apply Store offers / coupons</span>
-    <svg style="margin-left:auto" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-  </div>
-  <div class="bill-section">
-    <div style="font-weight:700;font-size:15px;margin-bottom:10px">Bill details</div>
-    <div class="bill-row"><span>Item Total</span><span id="billSubtotal">₹0</span></div>
-    <div class="bill-row" id="discountRow" style="display:none;color:var(--green)"><span>Coupon discount</span><span id="billDiscount">-₹0</span></div>
-    <div class="bill-row"><span>CGST (2.5%)</span><span id="billCgst">₹0</span></div>
-    <div class="bill-row"><span>SGST (2.5%)</span><span id="billSgst">₹0</span></div>
-    <div class="bill-row total"><span>To Pay</span><span id="billTotal">₹0</span></div>
-  </div>
-  <button class="pay-btn" id="payBtn">
-    <span id="payBtnTotal">₹0</span>
-    <span>PLACE ORDER →</span>
-  </button>
-</div>
-
-<!-- MENU NAV SHEET -->
-<div class="bottom-sheet" id="menuNavSheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <div style="font-size:13px;color:var(--sub)">Table 4 · BrewSync Café</div>
-    <button class="close-btn">✕</button>
-  </div>
-  <div id="menuNavList"></div>
-</div>
-
-<!-- COUPON PAGE -->
-<div class="coupon-page" id="couponPage">
-  <div class="page-header">
-    <button class="back-btn" id="couponBack">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <span style="font-weight:700;font-size:16px">Offers</span>
-  </div>
-  <div class="coupon-banner">
-    <div>
-      <h2>Store Offers</h2>
-      <p>Apply a coupon code to get discount on your order</p>
-    </div>
-    <span style="font-size:48px">🎁</span>
-  </div>
-  <div style="padding:16px;font-weight:600;font-size:14px;border-bottom:1px solid var(--border)">Store Offers</div>
-  <div class="coupon-input-wrap" style="position:relative">
-    <input class="coupon-input" id="couponInput" placeholder="Enter promo code here" style="padding-right:80px"/>
-    <span class="apply-link" id="applyCouponBtn">APPLY</span>
-  </div>
-  <div id="couponMsg" style="padding:0 16px;font-size:13px;margin-top:-8px"></div>
-  <div id="couponList"></div>
-</div>
-
-<!-- ORDER CONFIRM MODAL -->
-<div class="bottom-sheet" id="orderConfirmModal">
-  <div class="sheet-handle"></div>
-  <div style="padding:40px 24px;text-align:center">
-    <div style="font-size:64px;margin-bottom:16px">✅</div>
-    <h2 style="font-family:'Playfair Display',serif;font-size:24px;margin-bottom:8px">Order Placed!</h2>
-    <p style="color:var(--sub);font-size:14px;margin-bottom:24px">Your order has been sent to the kitchen</p>
-    <div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:24px;text-align:left">
-      <div class="bill-row"><span>Order ID</span><span style="font-weight:700" id="confirmOrderId">#—</span></div>
-      <div class="bill-row"><span>Table</span><span id="confirmTable">Table 4</span></div>
-      <div class="bill-row total"><span>Total</span><span id="confirmTotal">₹0</span></div>
-    </div>
-    <button class="pay-btn" id="confirmCloseBtn" style="width:100%;margin:0;justify-content:center">
-      <span>DONE</span>
-    </button>
-  </div>
-</div>
-
-<!-- GUEST DETAILS SHEET -->
-<div class="bottom-sheet" id="guestDetailsSheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <span class="sheet-title">Checkout Details</span>
-    <button class="close-btn">✕</button>
-  </div>
-  <div style="padding:20px 16px">
-    <p style="color:var(--sub);font-size:14px;margin-bottom:16px">Enter your email to receive a digital receipt, or skip to order as a guest.</p>
-    
-    <div id="guestInputScreen">
-      <div class="search-wrap" style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:15px">
-        <input type="email" id="guestEmailInput" placeholder="Enter your email address (Optional)" style="border:none;outline:none;width:100%;font-size:15px"/>
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo-mark">B</div>
+        <div>
+          <div class="cafe-name">BrewSync Café <span id="connStatus" style="font-size:10px;font-weight:400">●
+              Loading…</span></div>
+          <div class="cafe-sub" id="tableNum">Table 4 · Dine In</div>
+        </div>
       </div>
-      
-      <button class="pay-btn" id="proceedGuestBtn" style="width:100%;margin:0 0 12px 0;justify-content:center;border-radius:8px">
-        <span>PROCEED</span>
+      <div class="header-actions">
+        <div class="dine-badge" id="orderTypeToggle">
+          <span id="orderTypeLabel">Dine In</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+        <button class="header-cart-btn" id="headerCartBtn" aria-label="View Cart">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="20" cy="21" r="1" />
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+          </svg>
+          <span class="header-cart-count" id="headerCartCount">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- FLOATING ORDER TRACKER -->
+    <div class="active-orders-float hidden" id="activeOrdersFloat"></div>
+
+
+    <!-- BANNER CAROUSEL -->
+    <div class="banner-wrap">
+      <div class="banner-track" id="bannerTrack"></div>
+      <div class="banner-dots" id="bannerDots"></div>
+    </div>
+
+
+
+    <!-- EXPLORE MENU -->
+    <div class="section-head">
+      Explore Menu
+    </div>
+
+    <!-- CATEGORY GRID -->
+    <div class="cat-grid" id="catGrid"></div>
+
+    <!-- SEARCH -->
+    <div class="search-sticky" id="searchSticky">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input class="search-input" id="searchInput" placeholder="Search for items..." />
+      </div>
+    </div>
+
+    <!-- MENU SECTIONS (rendered dynamically) -->
+    <div id="menuSections"></div>
+
+    <div class="bottom-pad"></div>
+
+    <!-- FLOAT MENU BTN -->
+    <button class="float-menu" id="floatMenu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"
+        stroke-linejoin="round">
+        <line x1="4" y1="7" x2="20" y2="7" />
+        <line x1="4" y1="12" x2="20" y2="12" />
+        <line x1="4" y1="17" x2="20" y2="17" />
+      </svg>
+    </button>
+
+    <!-- CART BAR -->
+    <div class="cart-bar hidden" id="cartBar">
+      <div><span id="cartCount" class="cart-count-badge">0 items</span></div>
+      <div class="cart-bar-right">
+        <span id="cartTotal">₹0</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- OVERLAY -->
+    <div class="overlay-bg" id="overlayBg"></div>
+
+    <!-- CART SHEET -->
+    <div class="slide-page" id="cartSheet">
+      <div class="page-header">
+        <button class="back-btn" id="cartBackBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <span style="font-weight:700;font-size:16px">My Order</span>
+      </div>
+      <div id="cartItemsList"></div>
+      <div class="coupon-row" id="couponRowBtn">
+        <div class="coupon-icon">%</div>
+        <span>Apply Store offers / coupons</span>
+        <svg style="margin-left:auto" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </div>
+      <div class="bill-section">
+        <div style="font-weight:700;font-size:15px;margin-bottom:10px">Bill details</div>
+        <div class="bill-row"><span>Item Total</span><span id="billSubtotal">₹0</span></div>
+        <div class="bill-row" id="discountRow" style="display:none;color:var(--green)"><span>Coupon discount</span><span
+            id="billDiscount">-₹0</span></div>
+        <div class="bill-row"><span>CGST (2.5%)</span><span id="billCgst">₹0</span></div>
+        <div class="bill-row"><span>SGST (2.5%)</span><span id="billSgst">₹0</span></div>
+        <div class="bill-row total"><span>To Pay</span><span id="billTotal">₹0</span></div>
+      </div>
+      <button class="pay-btn" id="payBtn">
+        <span id="payBtnTotal">₹0</span>
+        <span>PLACE ORDER →</span>
       </button>
-      <button class="pay-btn" id="skipGuestBtn" style="width:100%;margin:0;justify-content:center;border-radius:8px;background:transparent;color:var(--sub);border:1px solid var(--border)">
-        <span>Skip & Proceed as Guest</span>
+      <button id="logoutBtn"
+        style="width:100%; padding:14px; background:var(--bg2); border:1px solid var(--border); color:var(--brand); border-radius:12px; font-weight:700; font-size:14px; margin-top:12px; cursor:pointer;">
+        Clear / Logout
       </button>
     </div>
-  </div>
-</div>
 
-<!-- ITEM CUSTOMIZER SHEET -->
-<div class="bottom-sheet" id="customizerSheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <span class="sheet-title">Customize Item</span>
-    <button class="close-btn">✕</button>
-  </div>
-  <div id="customizerContent" class="customizer-body"></div>
-</div>
+    <!-- MENU NAV SHEET -->
+    <div class="bottom-sheet" id="menuNavSheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div style="font-size:13px;color:var(--sub)">Table 4 · BrewSync Café</div>
+        <button class="close-btn">✕</button>
+      </div>
+      <div id="menuNavList"></div>
+    </div>
 
-<!-- ORDER TRACKER (full-screen page) -->
-<div class="tracker-page" id="orderTracker">
-  <div class="page-header">
-    <button class="back-btn" id="trackerBack">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <span style="font-weight:700;font-size:16px">Track Order</span>
-  </div>
-  <div id="trackerContent" class="tracker-body"></div>
-</div>
+    <!-- COUPON PAGE -->
+    <div class="slide-page" id="couponPage">
+      <div class="page-header">
+        <button class="back-btn" id="couponBack">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <span style="font-weight:700;font-size:16px">Offers</span>
+      </div>
+      <div class="coupon-banner">
+        <div>
+          <h2>Store Offers</h2>
+          <p>Apply a coupon code to get discount on your order</p>
+        </div>
+        <span style="font-size:48px">🎁</span>
+      </div>
+      <div style="padding:16px;font-weight:600;font-size:14px;border-bottom:1px solid var(--border)">Store Offers</div>
+      <div class="coupon-input-wrap" style="position:relative">
+        <input class="coupon-input" id="couponInput" placeholder="Enter promo code here" style="padding-right:80px" />
+        <span class="apply-link" id="applyCouponBtn">APPLY</span>
+      </div>
+      <div id="couponMsg" style="padding:0 16px;font-size:13px;margin-top:-8px"></div>
+      <div id="couponList"></div>
+    </div>
 
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script type="module" src="/src/main.js"></script>
+    <!-- ORDER CONFIRM MODAL -->
+    <div class="bottom-sheet" id="orderConfirmModal">
+      <div class="sheet-handle"></div>
+      <div style="padding:40px 24px;text-align:center">
+        <div style="font-size:64px;margin-bottom:16px">✅</div>
+        <h2 style="font-family:'Playfair Display',serif;font-size:24px;margin-bottom:8px">Order Placed!</h2>
+        <p style="color:var(--sub);font-size:14px;margin-bottom:24px">Your order has been sent to the kitchen</p>
+        <div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:24px;text-align:left">
+          <div class="bill-row"><span>Order ID</span><span style="font-weight:700" id="confirmOrderId">#—</span></div>
+          <div class="bill-row"><span>Table</span><span id="confirmTable">Table 4</span></div>
+          <div class="bill-row total"><span>Total</span><span id="confirmTotal">₹0</span></div>
+        </div>
+        <button class="pay-btn" id="confirmCloseBtn" style="width:100%;margin:0;justify-content:center">
+          <span>DONE</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- GUEST DETAILS SHEET -->
+    <div class="bottom-sheet" id="guestDetailsSheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title">Checkout Details</span>
+        <button class="close-btn">✕</button>
+      </div>
+      <div style="padding:20px 16px">
+        <p style="color:var(--sub);font-size:14px;margin-bottom:16px">Enter your email to receive a digital receipt, or
+          skip to order as a guest.</p>
+
+        <div id="guestInputScreen">
+          <div class="search-wrap"
+            style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:15px">
+            <input type="email" id="guestEmailInput" placeholder="Enter your email address (Optional)"
+              style="border:none;outline:none;width:100%;font-size:15px" />
+          </div>
+
+          <button class="pay-btn" id="proceedGuestBtn"
+            style="width:100%;margin:0 0 12px 0;justify-content:center;border-radius:8px">
+            <span>PROCEED</span>
+          </button>
+          <button class="pay-btn" id="skipGuestBtn"
+            style="width:100%;margin:0;justify-content:center;border-radius:8px;background:transparent;color:var(--sub);border:1px solid var(--border)">
+            <span>Skip & Proceed as Guest</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ITEM CUSTOMIZER SHEET -->
+    <div class="bottom-sheet" id="customizerSheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title">Customize Item</span>
+        <button class="close-btn">✕</button>
+      </div>
+      <div id="customizerContent" class="customizer-body"></div>
+    </div>
+
+    <!-- ORDER TRACKER (full-screen page) -->
+    <div class="slide-page" id="orderTracker">
+      <div class="page-header">
+        <button class="back-btn" id="trackerBack">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <span style="font-weight:700;font-size:16px">Track Order</span>
+      </div>
+      <div id="trackerContent" class="tracker-body"></div>
+    </div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script type="module" src="/src/main.js"></script>
+  </div>
 </body>
-</html>
 
+</html>

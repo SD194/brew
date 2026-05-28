@@ -122,6 +122,22 @@ export async function createOrder(orderData) {
 
   return order;
 }
+// ── FETCH ACTIVE ORDERS ──
+export async function fetchActiveOrdersForUser(userId) {
+  if (!isConfigured() || !userId) return [];
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, order_items(*)')
+    .eq('user_id', userId)
+    .not('status', 'in', '("served","cancelled")');
+  if (error) { logError('Active orders fetch error:', error); return []; }
+  
+  // Normalize items array
+  return (data || []).map(order => {
+    const items = order.order_items || order.items || [];
+    return { ...order, items, order_items: undefined };
+  });
+}
 
 // ── UPDATE ORDER STATUS ──
 export async function updateOrderStatus(orderId, status) {
@@ -156,4 +172,15 @@ export function subscribeToOrder(orderId, callback) {
   return {
     unsubscribe: () => supabase.removeChannel(channel)
   };
+}
+
+// ── STORE SETTINGS ──
+export async function fetchStoreSettings() {
+  if (!isConfigured()) return { is_online: true };
+  const { data, error } = await supabase.from('store_settings').select('*').eq('id', 1).single();
+  if (error) {
+    logError('Error fetching store settings:', error);
+    return { is_online: true }; // default to online if failed
+  }
+  return data;
 }

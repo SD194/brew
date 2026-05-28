@@ -1,17 +1,18 @@
 /**
  * BrewSync — Main Application Entry Point
  */
-import { fetchBanners, fetchCategories, fetchMenuItems, fetchCoupons, validateCoupon, createOrder } from './api.js';
+import { fetchBanners, fetchCategories, fetchMenuItems, fetchCoupons, validateCoupon, createOrder, fetchActiveOrdersForUser, fetchStoreSettings } from './api.js';
 import * as Cart from './cart.js';
 import * as UI from './ui.js';
-import { isConfigured } from './supabase.js';
+import { supabase, isConfigured } from './supabase.js';
 import { showSkeletons, showToast } from './animations.js';
 import { showTracker, hideTracker } from './order-tracker.js';
 import { appConfig } from './config.js';
+import { initSession, currentTable, clearSession, currentUser } from './session.js';
 import { logError } from './logger.js';
 import { hasCompletedCheckoutStep, openGuestCheckout, setupAuthListeners, getOrderEmail } from './auth.js';
 
-const TABLE_NUMBER = appConfig.tableNumber;
+let TABLE_NUMBER = 1;
 let categories = [];
 let menuItems = [];
 let coupons = [];
@@ -34,16 +35,39 @@ async function init() {
       statusEl.style.color = '#f5a623';
     }
 
+    // Init Session and Hydrate Cart
+    const initialCart = await initSession();
+    if (initialCart) Cart.hydrate(initialCart);
+    TABLE_NUMBER = currentTable;
+
     // Update table number display
     document.getElementById('tableNum').textContent = `Table ${TABLE_NUMBER} · Dine In`;
 
+    // Restore active session orders
+    if (currentUser) {
+      const activeOrders = await fetchActiveOrdersForUser(currentUser.id);
+      activeOrders.forEach(o => showTracker(o, true));
+    }
+
     // Fetch all data
-    const [bannerData, catData, itemData, couponData] = await Promise.all([
-      fetchBanners(), fetchCategories(), fetchMenuItems(), fetchCoupons()
+    const [bannerData, catData, itemData, couponData, storeSettings] = await Promise.all([
+      fetchBanners(), fetchCategories(), fetchMenuItems(), fetchCoupons(), fetchStoreSettings()
     ]);
     categories = catData;
     menuItems = itemData;
     coupons = couponData;
+    
+    // Apply initial online/offline status
+    handleStoreOnlineStatus(storeSettings.is_online);
+
+    // Setup realtime listener for store settings
+    if (isConfigured()) {
+      supabase.channel('store-settings-channel')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'store_settings' }, payload => {
+          handleStoreOnlineStatus(payload.new.is_online);
+        })
+        .subscribe();
+    }
 
     // Render everything
     UI.renderBanners(bannerData);
@@ -76,6 +100,19 @@ async function init() {
   }
 }
 
+function handleStoreOnlineStatus(isOnline) {
+  if (!isOnline) {
+    document.body.classList.add('store-offline');
+    document.getElementById('offlineOverlay').classList.add('show');
+    // Clear cart and close sheets to prevent checking out
+    Cart.clear();
+    UI.closeAllSheets();
+  } else {
+    document.body.classList.remove('store-offline');
+    document.getElementById('offlineOverlay').classList.remove('show');
+  }
+}
+
 function setupEventListeners() {
   // Veg toggle
   document.getElementById('vegToggle')?.addEventListener('click', () => {
@@ -85,6 +122,16 @@ function setupEventListeners() {
   });
 
   // Dine In / Takeout Toggle
+  // ── LOGOUT BUTTON ──
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      logoutBtn.textContent = 'Logging out...';
+      logoutBtn.style.opacity = '0.5';
+      await clearSession();
+    });
+  }
+
   const orderTypeToggle = document.getElementById('orderTypeToggle');
   const orderTypeLabel = document.getElementById('orderTypeLabel');
   const tableNum = document.getElementById('tableNum');
@@ -133,12 +180,17 @@ function setupEventListeners() {
     btn.addEventListener('click', () => UI.closeAllSheets());
   });
 
+  document.getElementById('cartBackBtn').addEventListener('click', () => {
+    UI.closeAllSheets();
+  });
+
   // Coupon page
   document.getElementById('couponRowBtn').addEventListener('click', () => {
     document.getElementById('couponPage').classList.add('show');
   });
   document.getElementById('couponBack').addEventListener('click', () => {
     document.getElementById('couponPage').classList.remove('show');
+    document.getElementById('overlayBg').classList.add('show');
   });
 
   // Apply coupon
@@ -169,18 +221,29 @@ function setupEventListeners() {
 
 // ── Razorpay helper ──
 function openRazorpay(amount, description, onSuccess, onCancel) {
-  new window.Razorpay({
-    key: appConfig.razorpayKeyId,
-    amount: amount * 100,
-    currency: 'INR',
-    name: 'BrewSync Café',
-    description,
-    theme: { color: '#c8783c' },
-    handler(response) {
-      onSuccess(response.razorpay_payment_id);
-    },
-    modal: { ondismiss: onCancel }
-  }).open();
+  if (!window.Razorpay) {
+    onCancel();
+    showToast('Payment system offline. Please use Demo Mode.', 'error');
+    return;
+  }
+  try {
+    new window.Razorpay({
+      key: appConfig.razorpayKeyId,
+      amount: Math.round(amount * 100),
+      currency: 'INR',
+      name: 'BrewSync Café',
+      description,
+      theme: { color: '#c8783c' },
+      handler(response) {
+        onSuccess(response.razorpay_payment_id);
+      },
+      modal: { ondismiss: onCancel }
+    }).open();
+  } catch (err) {
+    console.error('Razorpay Init Error:', err);
+    onCancel();
+    showToast(`Payment failed: ${err.message || 'Unknown error'}`, 'error');
+  }
 }
 
 async function handlePayment() {
@@ -206,6 +269,7 @@ async function handlePayment() {
 
   const coupon = Cart.getCoupon();
   const baseOrder = {
+    user_id: currentUser?.id || null,
     table_number: TABLE_NUMBER,
     order_type: orderType,
     status: 'pending',
@@ -267,7 +331,7 @@ async function handlePayment() {
         logError('Order placement failed:', err);
       }
     },
-    resetBtn  // user closed Razorpay without paying → re-enable button
+    resetBtn
   );
 }
 

@@ -2,9 +2,18 @@
  * BrewSync — Cart State Manager
  */
 
+import { syncCartToSession } from './session.js';
+
 let cart = {};
 let appliedCoupon = null;
 let listeners = [];
+
+export function hydrate(cartData) {
+  if (cartData && typeof cartData === 'object') {
+    cart = { ...cartData };
+    notify();
+  }
+}
 
 export function getCart() { return cart; }
 export function getCoupon() { return appliedCoupon; }
@@ -14,7 +23,10 @@ export function subscribe(fn) {
   return () => { listeners = listeners.filter(l => l !== fn); };
 }
 
-function notify() { listeners.forEach(fn => fn(cart, appliedCoupon)); }
+function notify() { 
+  listeners.forEach(fn => fn(cart, appliedCoupon)); 
+  syncCartToSession(cart);
+}
 
 export function addItem(id, name, price, menuItemId) {
   if (!cart[id]) cart[id] = { name, price, qty: 0, menu_item_id: menuItemId || id };

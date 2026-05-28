@@ -51,14 +51,16 @@ serve(async (req) => {
         const { data, error } = await supabaseAdmin.auth.admin.listUsers();
         if (error) throw error;
         
-        // Map users to a safe format for the frontend
-        result = data.users.map(u => ({
-          id: u.id,
-          email: u.email,
-          name: u.user_metadata?.name || u.email?.split('@')[0],
-          role: u.app_metadata?.role || 'staff',
-          created_at: u.created_at
-        }));
+        // Map users to a safe format for the frontend, filtering out anonymous guests (no email)
+        result = data.users
+          .filter(u => u.email)
+          .map(u => ({
+            id: u.id,
+            email: u.email,
+            name: u.user_metadata?.name || u.email?.split('@')[0] || 'Unknown',
+            role: u.app_metadata?.role || 'staff',
+            created_at: u.created_at
+          }));
         break;
       }
       
@@ -129,7 +131,7 @@ serve(async (req) => {
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+      status: 200, // Return 200 so supabase-js invoke() parses the JSON body instead of throwing a generic HttpError
     });
   }
 });

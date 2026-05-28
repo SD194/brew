@@ -392,15 +392,25 @@ body {
 }
 .menu-nav-item:hover { color: var(--brand); }
 
-/* ── COUPON PAGE ── */
-.coupon-page {
-  position: fixed; top: 0; bottom: 0; right: 0; background: var(--white);
-  z-index: 120; transform: translateX(100%);
-  transition: transform .3s ease, opacity .3s ease, visibility .3s ease; overflow-y: auto;
+/* ── SLIDE PAGES (Cart, Coupon, Tracker) ── */
+.slide-page {
+  position: fixed; top: 0; bottom: 0;
   width: 100%; max-width: 430px;
+  background: var(--bg); z-index: 120;
+  transform: translateX(100%);
+  transition: transform .3s ease, opacity .3s ease, visibility .3s ease;
+  overflow-y: auto;
   opacity: 0; visibility: hidden; pointer-events: none;
+  border-radius: 0; box-shadow: none;
 }
-.coupon-page.show { transform: translateX(0); opacity: 1; visibility: visible; pointer-events: auto; }
+@media (min-width: 431px) {
+  .slide-page { left: 50%; margin-left: -215px; }
+}
+@media (max-width: 430px) {
+  .slide-page { left: 0; }
+}
+.slide-page.show { transform: translateX(0); opacity: 1; visibility: visible; pointer-events: auto; }
+
 .coupon-banner {
   background: linear-gradient(135deg, #f5a623, #f7c948);
   padding: 20px 16px 24px; display: flex; align-items: center; justify-content: space-between;
@@ -924,47 +934,7 @@ body {
     background: var(--white) !important;
   }
 
-  /* Centered floating popups on desktop */
-  #cartSheet {
-    left: 50% !important;
-    transform: translateX(-50%) translateY(calc(100% + 50px)) !important;
-    width: 480px !important;
-    max-width: 90% !important;
-    height: 650px !important; /* FIXED HEIGHT FOR PREMIUM DESKTOP MODAL */
-    border-radius: 20px !important;
-    bottom: 30px !important;
-    box-shadow: 0 16px 48px rgba(0,0,0,0.15) !important;
-    max-height: 85vh !important;
-    position: fixed !important;
-    display: flex !important;
-    flex-direction: column !important;
-    background: var(--white) !important;
-    z-index: 110 !important;
-    border: 1px solid rgba(0,0,0,0.05) !important;
-    overflow: hidden !important;
-  }
 
-  #cartSheet.show {
-    transform: translateX(-50%) translateY(0) !important;
-  }
-
-  /* Make handle and close buttons visible on desktop cart */
-  #cartSheet .sheet-handle, 
-  #cartSheet .close-btn {
-    display: flex !important;
-  }
-
-  #cartSheet .sheet-header {
-    padding: 16px 20px !important;
-    background: #fff;
-    border-bottom: 1px solid var(--border);
-  }
-
-  #cartItemsList {
-    flex: 1 !important;
-    overflow-y: auto !important;
-    padding-bottom: 20px !important;
-  }
 
   /* Smooth scrollbars for cart items and body */
   #cartItemsList::-webkit-scrollbar,
@@ -986,3 +956,51 @@ body {
   }
 }
 
+
+/* ── OFFLINE MODE ── */
+.offline-overlay {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--brand);
+  color: white;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(100%);
+  pointer-events: none;
+  transition: all 0.3s ease;
+  text-align: center;
+  padding: 20px;
+  box-shadow: 0 -10px 30px rgba(200, 16, 46, 0.2);
+}
+.offline-overlay.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.offline-content h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.offline-content p {
+  font-size: 14px;
+  opacity: 0.9;
+  line-height: 1.4;
+}
+
+.store-offline .item-img,
+.store-offline .item-img-placeholder,
+.store-offline .bill-item-img {
+  filter: grayscale(100%);
+  opacity: 0.7;
+}
+
+.store-offline .add-btn,
+.store-offline .qty-control,
+.store-offline .pay-btn {
+  pointer-events: none;
+  opacity: 0.5;
+  filter: grayscale(100%);
+}

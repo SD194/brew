@@ -8,25 +8,46 @@ import { createAdminOrder, updateOrderStatus, validateCoupon } from './api.js';
 import { adminConfig } from './config.js';
 import { escapeAttribute, escapeHtml, formatCurrency } from './sanitize.js';
 import { openPOSCustomizer } from './pos-customizer.js';
+import { supabase } from './supabase.js';
 
 let posCart = [];
 let appliedCoupon = null;
 let activeCat = 'all';
 
+async function syncPOSCart() {
+  if (!window.APP || !window.APP.user) return;
+  await supabase.from('cart_sessions').upsert({
+    user_id: window.APP.user.id,
+    table_number: 99,
+    cart_data: posCart
+  }, { onConflict: 'user_id' }).catch(() => {});
+}
+
 // ── Razorpay helper ──────────────────────────────────────────────────────────
 function openRazorpay(amount, tableNumber, onSuccess, onCancel) {
-  new window.Razorpay({
-    key: adminConfig.razorpayKeyId,
-    amount: amount * 100,
-    currency: 'INR',
-    name: 'BrewSync Café',
-    description: `POS Order · Table ${tableNumber}`,
-    theme: { color: '#c8783c' },
-    handler(response) {
-      onSuccess(response.razorpay_payment_id);
-    },
-    modal: { ondismiss: onCancel }
-  }).open();
+  if (!window.Razorpay) {
+    onCancel();
+    toast('Payment system offline. Please use Cash.', 'error');
+    return;
+  }
+  try {
+    new window.Razorpay({
+      key: adminConfig.razorpayKeyId,
+      amount: Math.round(amount * 100),
+      currency: 'INR',
+      name: 'BrewSync Café',
+      description: `POS Order · Table ${tableNumber}`,
+      theme: { color: '#c8783c' },
+      handler(response) {
+        onSuccess(response.razorpay_payment_id);
+      },
+      modal: { ondismiss: onCancel }
+    }).open();
+  } catch (err) {
+    console.error('Razorpay POS Error:', err);
+    onCancel();
+    toast(`Payment failed: ${err.message || 'Unknown error'}`, 'error');
+  }
 }
 
 // ── Render ───────────────────────────────────────────────────────────────────
@@ -71,7 +92,11 @@ function renderPOSItems() {
     const inCartCount = posCart.filter(c => c.id === item.id).reduce((s, c) => s + c.qty, 0);
     return `
       <div class="pos-item-card ${inCartCount > 0 ? 'in-cart' : ''}" data-id="${escapeAttribute(item.id)}">
-        <div class="pos-item-emoji">${escapeHtml(item.emoji || '🍽️')}</div>
+        <div class="pos-item-emoji">
+          ${item.image_url 
+            ? `<img src="${escapeAttribute(item.image_url)}" alt="${escapeAttribute(item.name)}" loading="lazy"/>`
+            : escapeHtml(item.emoji || '🍽️')}
+        </div>
         <div class="pos-item-name">${escapeHtml(item.name)}</div>
         <div class="pos-item-price">${formatCurrency(item.price)}</div>
         ${inCartCount > 0 ? `<div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">×${inCartCount} in cart</div>` : ''}
@@ -164,7 +189,16 @@ function renderPOSCart() {
 }
 
 // ── Init & event wiring ──────────────────────────────────────────────────────
-export function initPOS() {
+export async function initPOS() {
+  if (window.APP && window.APP.user) {
+    const { data } = await supabase.from('cart_sessions').select('cart_data').eq('user_id', window.APP.user.id).single();
+    if (data && Array.isArray(data.cart_data)) {
+      posCart = data.cart_data;
+      renderPOSCart();
+      bindPOSCartActions();
+    }
+  }
+
   document.querySelectorAll('.pos-cat-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeCat = btn.dataset.cat;
@@ -180,6 +214,7 @@ export function initPOS() {
   document.getElementById('posClearCart')?.addEventListener('click', () => {
     posCart = [];
     appliedCoupon = null;
+    syncPOSCart();
     renderPOSItems();
     renderPOSCart();
     bindPOSItemClicks();
@@ -214,6 +249,7 @@ function addToCart(id, name, price, emoji, notes) {
   } else {
     posCart.push({ id, cartId, name, price, emoji: emoji || '🍽️', qty: 1, notes });
   }
+  syncPOSCart();
   renderPOSItems();
   renderPOSCart();
   bindPOSItemClicks();
@@ -232,6 +268,7 @@ function bindPOSCartActions() {
       if (action === 'inc') item.qty++;
       if (action === 'dec') { item.qty--; if (item.qty <= 0) posCart = posCart.filter(c => c.cartId !== cartId); }
 
+      syncPOSCart();
       renderPOSItems();
       renderPOSCart();
       bindPOSItemClicks();
